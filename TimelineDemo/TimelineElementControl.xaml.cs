@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace TimelineDemo {
     /// <summary>
@@ -50,8 +51,6 @@ namespace TimelineDemo {
                     (d, e) => ((TimelineElementControl) d).OnFrameDurationChanged((int) e.OldValue, (int) e.NewValue),
                     (d, v) => (int) v < 0 ? 0 : v));
 
-        public TimelineLayerControl TimelineLayer { get; set; }
-
         /// <summary>
         /// The zoom level of this timeline layer
         /// <para>
@@ -65,6 +64,9 @@ namespace TimelineDemo {
 
         /// <summary>
         /// The number of frames this element's render is offset by
+        /// <para>
+        /// TODO: Remove this because the rendering offset should be done somewhere better! This just introduces more hassle and bugs
+        /// </para>
         /// </summary>
         public double FrameOffset {
             get => (double) this.GetValue(FrameOffsetProperty);
@@ -124,22 +126,137 @@ namespace TimelineDemo {
             get => this.FrameBegin * this.UnitZoom;
         }
 
+        public TimelineLayerControl TimelineLayer { get; set; }
+
         private bool isUpdatingUnitZoom;
         private bool isUpdatingFrameOffset;
         private bool isUpdatingFrameBegin;
         private bool isUpdatingFrameDuration;
 
+        private TimelineElementMoveData moveDrag;
+
+        private bool isMovingControl;
+        private Point lastMousePoint;
+
         public TimelineElementControl() {
             this.InitializeComponent();
+            this.Focusable = true;
+        }
+
+        public Point GetMousePositionRelativeToTimelineLayer(MouseDevice mouse) {
+            return mouse.GetPosition(this.TimelineLayer);
+        }
+
+        protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e) {
+            this.moveDrag = new TimelineElementMoveData(this) {
+                FrameBegin = this.FrameBegin
+            };
+
+            this.lastMousePoint = e.GetPosition(this);
+            this.CaptureMouse();
+            this.Focus();
+        }
+
+        protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e) {
+            if (this.IsMouseCaptured) {
+                this.FinishCompletedDragMove();
+                this.ReleaseMouseCapture();
+            }
+        }
+
+        private void FinishCompletedDragMove() {
+            if (this.moveDrag != null) {
+                this.moveDrag.OnDragComplete();
+                this.moveDrag = null;
+            }
+        }
+
+        protected override void OnPreviewKeyDown(KeyEventArgs e) {
+            if (this.moveDrag == null) {
+                return;
+            }
+
+            switch (e.Key) {
+                case Key.LeftCtrl:
+                case Key.RightCtrl:
+                    this.HandleDrag_CopyClipMode();
+                    return;
+                case Key.LeftShift:
+                case Key.RightShift:
+                    this.HandleDrag_MoveClipMode();
+                    return;
+                case Key.Escape:
+                    this.HandleDrag_CancelDrag();
+                    return;
+            }
+        }
+
+        private const bool CREATE_COPY_AT_DRAG_START_LOCATION = true;
+
+        private void HandleDrag_CopyClipMode() {
+            if (this.moveDrag.CopiedElement == null) {
+                this.moveDrag.CopiedElement = this.TimelineLayer.CreateClonedElement(this);
+                if (CREATE_COPY_AT_DRAG_START_LOCATION) {
+                    this.moveDrag.CopiedElement.FrameBegin = this.moveDrag.FrameBegin;
+                }
+
+                this.moveDrag.IsCopyDrop = true;
+            }
+        }
+
+        private void HandleDrag_MoveClipMode() {
+            this.moveDrag.DestroyCopiedClip();
+            this.moveDrag.IsCopyDrop = false;
+        }
+        private void HandleDrag_CancelDrag() {
+            this.moveDrag.OnDragCancelled();
+            this.moveDrag = null;
+            this.ReleaseMouseCapture();
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e) {
+            if (this.isMovingControl) {
+                return;
+            }
+
+            if (this.IsMouseCaptured) {
+                if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control) {
+                    this.HandleDrag_CopyClipMode();
+                }
+                else if ((Keyboard.Modifiers & ModifierKeys.Shift) == ModifierKeys.Shift) {
+                    this.HandleDrag_MoveClipMode();
+                }
+
+                if (Keyboard.IsKeyDown(Key.Escape)) {
+                    this.HandleDrag_CancelDrag();
+                    return;
+                }
+
+                Point mousePoint = e.GetPosition(this);
+                double difference = mousePoint.X - this.lastMousePoint.X;
+                if (Math.Abs(difference) >= 1.0d) {
+                    this.isMovingControl = true;
+                    this.FrameBegin += (int) (difference / this.UnitZoom);
+                    this.isMovingControl = false;
+                }
+            }
+            else if (this.moveDrag != null) {
+                if (e.LeftButton == MouseButtonState.Released) {
+                    return;
+                }
+                else {
+                    this.moveDrag.OnDragCancelled();
+                    this.moveDrag = null;
+                }
+            }
         }
 
         private void OnUnitZoomChanged(double oldZoom, double newZoom) {
             if (this.isUpdatingUnitZoom)
                 return;
             this.isUpdatingUnitZoom = true;
-            if (Math.Abs(oldZoom - newZoom) > TimelineUtils.MinUnitZoom) {
+            if (Math.Abs(oldZoom - newZoom) > TimelineUtils.MinUnitZoom)
                 this.UpdatePositionAndSize();
-            }
             this.isUpdatingUnitZoom = false;
         }
 
@@ -148,9 +265,8 @@ namespace TimelineDemo {
                 return;
 
             this.isUpdatingFrameOffset = true;
-            if (Math.Abs(oldOffset - newOffset) > TimelineUtils.MinUnitZoom) {
+            if (Math.Abs(oldOffset - newOffset) > TimelineUtils.MinUnitZoom)
                 this.UpdatePosition();
-            }
             this.isUpdatingFrameOffset = false;
         }
 
@@ -158,9 +274,8 @@ namespace TimelineDemo {
             if (this.isUpdatingFrameBegin)
                 return;
             this.isUpdatingFrameBegin = true;
-            if (Math.Abs(oldStart - newStart) > TimelineUtils.MinUnitZoom) {
+            if (oldStart != newStart)
                 this.UpdatePosition();
-            }
             this.isUpdatingFrameBegin = false;
         }
 
@@ -168,9 +283,8 @@ namespace TimelineDemo {
             if (this.isUpdatingFrameDuration)
                 return;
             this.isUpdatingFrameDuration = true;
-            if (Math.Abs(oldDuration - newDuration) > TimelineUtils.MinUnitZoom) {
+            if (oldDuration != newDuration)
                 this.UpdateSize();
-            }
             this.isUpdatingFrameDuration = false;
         }
 

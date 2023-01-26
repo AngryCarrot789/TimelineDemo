@@ -10,7 +10,11 @@
              HorizontalAlignment="Left">
     <Border Background="#FFC1C1C1" BorderBrush="#FF919191" BorderThickness="1 0">
         <Grid>
-            
+            <Border Background="#FF919191" VerticalAlignment="Top" Height="12">
+                <Grid>
+                    <TextBlock Text="Some Clip Here!" FontSize="10" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
         </Grid>
     </Border>
 </UserControl>

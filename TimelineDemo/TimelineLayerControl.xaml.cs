@@ -111,6 +111,31 @@ namespace TimelineDemo {
             return this.ElementGrid.Children.Cast<TimelineElementControl>();
         }
 
+        /// <summary>
+        /// Creates a deep cloned timeline element using the exact same data as the given element
+        /// </summary>
+        /// <param name="element"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        public TimelineElementControl CreateClonedElement(TimelineElementControl element) {
+            if (element.TimelineLayer != this) {
+                throw new ArgumentException("Element's timeline layer does not equal the current instance");
+            }
+
+            TimelineElementControl cloned = new TimelineElementControl {
+                TimelineLayer = this
+            };
+
+            this.ElementGrid.Children.Add(cloned);
+            this.OnElementChildrenChanged();
+
+            cloned.FrameOffset = element.FrameOffset;
+            cloned.UnitZoom = element.UnitZoom;
+            cloned.FrameBegin = element.FrameBegin;
+            cloned.FrameDuration = element.FrameDuration;
+            return cloned;
+        }
+
         public TimelineElementControl CreateElement(int startFrame, int durationFrames) {
             TimelineElementControl element = new TimelineElementControl {
                 TimelineLayer = this
@@ -119,13 +144,33 @@ namespace TimelineDemo {
             this.ElementGrid.Children.Add(element);
             this.OnElementChildrenChanged();
 
+            element.FrameOffset = this.FrameOffset;
+            element.UnitZoom = this.UnitZoom;
             element.FrameBegin = startFrame;
             element.FrameDuration = durationFrames;
-            element.UnitZoom = this.UnitZoom;
             return element;
         }
 
+        /// <summary>
+        /// Removes the given clip from this timeline layer
+        /// </summary>
+        /// <param name="element"></param>
+        public bool DestroyClip(TimelineElementControl element) {
+            int index = this.ElementGrid.Children.IndexOf(element);
+            if (index == -1) {
+                return false;
+            }
+
+            this.ElementGrid.Children.Remove(element);
+            this.OnElementChildrenChanged();
+            return true;
+        }
+
         public void OnElementChildrenChanged() {
+
+        }
+
+        public void OnClipDragged(TimelineElementControl element, TimelineElementMoveData data) {
 
         }
     }
