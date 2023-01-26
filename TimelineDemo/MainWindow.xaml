@@ -1,0 +1,14 @@
+﻿<Window x:Class="TimelineDemo.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TimelineDemo"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800" PreviewMouseWheel="Window_PreviewMouseWheel">
+    <Grid>
+        <local:TimelineControl Margin="0,0,0,28" x:Name="MyTimeline" FocusManager.IsFocusScope="True"/>
+        <Slider Minimum="0.001" Maximum="5" Value="{Binding UnitZoom, ElementName=MyTimeline, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Bottom" Margin="5,0,0,5" HorizontalAlignment="Left" Width="200"/>
+        <Slider Minimum="-2000" Maximum="2000" Value="{Binding FrameOffset, ElementName=MyTimeline, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Bottom" Margin="210,0,5,5"/>
+    </Grid>
+</Window>
