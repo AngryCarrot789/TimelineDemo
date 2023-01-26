@@ -4,7 +4,7 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace TimelineDemo {
+namespace TimelineDemo.Timeline {
     /// <summary>
     /// Interaction logic for TimelineControl.xaml
     /// </summary>

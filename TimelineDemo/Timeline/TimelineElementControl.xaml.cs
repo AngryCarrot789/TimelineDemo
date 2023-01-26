@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 
-namespace TimelineDemo {
+namespace TimelineDemo.Timeline {
     /// <summary>
     /// Interaction logic for TimelineElementControl.xaml
     /// </summary>
@@ -15,7 +15,7 @@ namespace TimelineDemo {
                 typeof(TimelineElementControl),
                 new FrameworkPropertyMetadata(
                     1d,
-                    FrameworkPropertyMetadataOptions.None,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender,
                     (d, e) => ((TimelineElementControl) d).OnUnitZoomChanged((double) e.OldValue, (double) e.NewValue),
                     (d, v) => TimelineUtils.ClampUnitZoom(v)));
 
@@ -26,7 +26,7 @@ namespace TimelineDemo {
                 typeof(TimelineElementControl),
                 new FrameworkPropertyMetadata(
                     0d,
-                    FrameworkPropertyMetadataOptions.None,
+                    FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender,
                     (d, e) => ((TimelineElementControl) d).OnFrameOffsetChanged((double) e.OldValue, (double) e.NewValue)));
 
         public static readonly DependencyProperty FrameBeginProperty =
@@ -50,6 +50,24 @@ namespace TimelineDemo {
                     FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender,
                     (d, e) => ((TimelineElementControl) d).OnFrameDurationChanged((int) e.OldValue, (int) e.NewValue),
                     (d, v) => (int) v < 0 ? 0 : v));
+
+        public static readonly DependencyProperty IsSelectedProperty =
+            DependencyProperty.Register(
+                "IsSelected",
+                typeof(bool),
+                typeof(TimelineElementControl),
+                new FrameworkPropertyMetadata(
+                    false,
+                    FrameworkPropertyMetadataOptions.None,
+                    (d, e) => ((TimelineElementControl) d).OnIsSelectedChanged((bool) e.OldValue, (bool) e.NewValue)));
+
+        private void OnIsSelectedChanged(bool oldSelected, bool newSelected) {
+            if (oldSelected != newSelected) {
+                if (newSelected) {
+                    this.Focus();
+                }
+            }
+        }
 
         /// <summary>
         /// The zoom level of this timeline layer
@@ -87,6 +105,11 @@ namespace TimelineDemo {
         public int FrameBegin {
             get => (int) this.GetValue(FrameBeginProperty);
             set => this.SetValue(FrameBeginProperty, value);
+        }
+
+        public bool IsSelected {
+            get => (bool) this.GetValue(IsSelectedProperty);
+            set => this.SetValue(IsSelectedProperty, value);
         }
 
         /// <summary>
@@ -136,11 +159,21 @@ namespace TimelineDemo {
         private TimelineElementMoveData moveDrag;
 
         private bool isMovingControl;
-        private Point lastMousePoint;
+        private Point lastLeftClickPoint;
 
         public TimelineElementControl() {
             this.InitializeComponent();
             this.Focusable = true;
+        }
+
+        protected override void OnGotFocus(RoutedEventArgs e) {
+            base.OnGotFocus(e);
+            this.OutlineBorder.BorderThickness = new Thickness(1);
+        }
+
+        protected override void OnLostFocus(RoutedEventArgs e) {
+            base.OnLostFocus(e);
+            this.OutlineBorder.BorderThickness = new Thickness(0);
         }
 
         public Point GetMousePositionRelativeToTimelineLayer(MouseDevice mouse) {
@@ -148,12 +181,7 @@ namespace TimelineDemo {
         }
 
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e) {
-            this.moveDrag = new TimelineElementMoveData(this) {
-                FrameBegin = this.FrameBegin
-            };
-
-            this.lastMousePoint = e.GetPosition(this);
-            this.CaptureMouse();
+            this.lastLeftClickPoint = e.GetPosition(this);
             this.Focus();
         }
 
@@ -162,6 +190,16 @@ namespace TimelineDemo {
                 this.FinishCompletedDragMove();
                 this.ReleaseMouseCapture();
             }
+        }
+
+        private void BeginDragMovement(/* Point mousePosition */) {
+            this.moveDrag = new TimelineElementMoveData(this) {
+                FrameBegin = this.FrameBegin
+            };
+
+            // this.lastLeftClickPoint = mousePosition;
+            this.CaptureMouse();
+            this.Focus();
         }
 
         private void FinishCompletedDragMove() {
@@ -191,23 +229,28 @@ namespace TimelineDemo {
             }
         }
 
-        private const bool CREATE_COPY_AT_DRAG_START_LOCATION = true;
-
         private void HandleDrag_CopyClipMode() {
             if (this.moveDrag.CopiedElement == null) {
                 this.moveDrag.CopiedElement = this.TimelineLayer.CreateClonedElement(this);
-                if (CREATE_COPY_AT_DRAG_START_LOCATION) {
+                bool createCopyAtCursor = Keyboard.IsKeyDown(Key.Space);
+                if (createCopyAtCursor) {
+                    this.moveDrag.CopiedElement.FrameBegin = this.FrameBegin;
+                    this.moveDrag.IsCopyDropAndMoveOriginal = true;
+                }
+                else {
                     this.moveDrag.CopiedElement.FrameBegin = this.moveDrag.FrameBegin;
+                    this.moveDrag.IsCopyDropAndMoveOriginal = false;
                 }
 
-                this.moveDrag.IsCopyDrop = true;
+                this.moveDrag.IsCopyDropAndLeaveOriginal = true;
             }
         }
 
         private void HandleDrag_MoveClipMode() {
             this.moveDrag.DestroyCopiedClip();
-            this.moveDrag.IsCopyDrop = false;
+            this.moveDrag.IsCopyDropAndLeaveOriginal = false;
         }
+
         private void HandleDrag_CancelDrag() {
             this.moveDrag.OnDragCancelled();
             this.moveDrag = null;
@@ -218,6 +261,8 @@ namespace TimelineDemo {
             if (this.isMovingControl) {
                 return;
             }
+
+            Point mousePoint = e.GetPosition(this);
 
             if (this.IsMouseCaptured) {
                 if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control) {
@@ -232,8 +277,7 @@ namespace TimelineDemo {
                     return;
                 }
 
-                Point mousePoint = e.GetPosition(this);
-                double difference = mousePoint.X - this.lastMousePoint.X;
+                double difference = mousePoint.X - this.lastLeftClickPoint.X;
                 if (Math.Abs(difference) >= 1.0d) {
                     this.isMovingControl = true;
                     this.FrameBegin += (int) (difference / this.UnitZoom);
@@ -247,6 +291,12 @@ namespace TimelineDemo {
                 else {
                     this.moveDrag.OnDragCancelled();
                     this.moveDrag = null;
+                }
+            }
+            else if (e.LeftButton == MouseButtonState.Pressed) {
+                // handle "drag entry zone"
+                if (Math.Abs(this.lastLeftClickPoint.X - mousePoint.X) > 10d) {
+                    this.BeginDragMovement();
                 }
             }
         }
