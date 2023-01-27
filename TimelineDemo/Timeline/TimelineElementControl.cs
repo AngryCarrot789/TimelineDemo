@@ -1,13 +1,16 @@
 ﻿using System;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
 namespace TimelineDemo.Timeline {
     /// <summary>
     /// Interaction logic for TimelineElementControl.xaml
     /// </summary>
-    public partial class TimelineElementControl : UserControl {
+    public class TimelineElementControl : Control {
         public static readonly DependencyProperty UnitZoomProperty =
             DependencyProperty.Register(
                 "UnitZoom",
@@ -52,22 +55,21 @@ namespace TimelineDemo.Timeline {
                     (d, v) => (int) v < 0 ? 0 : v));
 
         public static readonly DependencyProperty IsSelectedProperty =
-            DependencyProperty.Register(
-                "IsSelected",
-                typeof(bool),
+            Selector.IsSelectedProperty.AddOwner(
                 typeof(TimelineElementControl),
                 new FrameworkPropertyMetadata(
                     false,
-                    FrameworkPropertyMetadataOptions.None,
+                    FrameworkPropertyMetadataOptions.BindsTwoWayByDefault | FrameworkPropertyMetadataOptions.Journal,
                     (d, e) => ((TimelineElementControl) d).OnIsSelectedChanged((bool) e.OldValue, (bool) e.NewValue)));
-
-        private void OnIsSelectedChanged(bool oldSelected, bool newSelected) {
-            if (oldSelected != newSelected) {
-                if (newSelected) {
-                    this.Focus();
-                }
-            }
-        }
+        // public static readonly DependencyProperty IsSelectedProperty =
+        //     DependencyProperty.Register(
+        //         "IsSelected",
+        //         typeof(bool),
+        //         typeof(TimelineElementControl),
+        //         new FrameworkPropertyMetadata(
+        //             false,
+        //             FrameworkPropertyMetadataOptions.None,
+        //             (d, e) => ((TimelineElementControl) d).OnIsSelectedChanged((bool) e.OldValue, (bool) e.NewValue)));
 
         /// <summary>
         /// The zoom level of this timeline layer
@@ -107,6 +109,7 @@ namespace TimelineDemo.Timeline {
             set => this.SetValue(FrameBeginProperty, value);
         }
 
+        [Category("Appearance")]
         public bool IsSelected {
             get => (bool) this.GetValue(IsSelectedProperty);
             set => this.SetValue(IsSelectedProperty, value);
@@ -162,22 +165,21 @@ namespace TimelineDemo.Timeline {
         private Point lastLeftClickPoint;
 
         public TimelineElementControl() {
-            this.InitializeComponent();
             this.Focusable = true;
         }
 
         protected override void OnGotFocus(RoutedEventArgs e) {
             base.OnGotFocus(e);
-            this.OutlineBorder.BorderThickness = new Thickness(1);
+            if (!this.IsSelected) {
+                this.IsSelected = true;
+            }
         }
 
         protected override void OnLostFocus(RoutedEventArgs e) {
             base.OnLostFocus(e);
-            this.OutlineBorder.BorderThickness = new Thickness(0);
-        }
-
-        public Point GetMousePositionRelativeToTimelineLayer(MouseDevice mouse) {
-            return mouse.GetPosition(this.TimelineLayer);
+            if (this.IsSelected) {
+                this.IsSelected = false;
+            }
         }
 
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e) {
@@ -336,6 +338,16 @@ namespace TimelineDemo.Timeline {
             if (oldDuration != newDuration)
                 this.UpdateSize();
             this.isUpdatingFrameDuration = false;
+        }
+
+        private void OnIsSelectedChanged(bool oldSelected, bool newSelected) {
+            if (oldSelected == newSelected) {
+                return;
+            }
+
+            if (newSelected && !this.IsFocused) {
+                this.Focus();
+            }
         }
 
         public void UpdatePositionAndSize() {

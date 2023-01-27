@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,8 +10,6 @@ namespace TimelineDemo.Timeline {
     /// Interaction logic for TimelineLayerControl.xaml
     /// </summary>
     public partial class TimelineLayerControl : UserControl {
-        public TimelineControl Timeline { get; set; }
-
         public static readonly DependencyProperty UnitZoomProperty =
             DependencyProperty.Register(
                 "UnitZoom",
@@ -32,41 +31,15 @@ namespace TimelineDemo.Timeline {
                     FrameworkPropertyMetadataOptions.None,
                     (d, e) => ((TimelineLayerControl) d).OnFrameOffsetChanged((double) e.OldValue, (double) e.NewValue)));
 
-        private bool isUpdatingUnitZoom;
-        private bool isUpdatingFrameOffset;
-
-        public TimelineLayerControl() {
-            this.InitializeComponent();
-            this.CreateElement(0, 100);
-            this.CreateElement(105, 30);
-            this.CreateElement(200, 50);
-        }
-
-        private void OnUnitZoomChanged(double oldZoom, double newZoom) {
-            if (this.isUpdatingUnitZoom)
-                return;
-
-            this.isUpdatingUnitZoom = true;
-            if (Math.Abs(oldZoom - newZoom) > TimelineUtils.MinUnitZoom) {
-                foreach (TimelineElementControl element in this.GetElements()) {
-                    element.UnitZoom = newZoom;
-                }
-            }
-            this.isUpdatingUnitZoom = false;
-        }
-
-        private void OnFrameOffsetChanged(double oldOffset, double newOffset) {
-            if (this.isUpdatingFrameOffset)
-                return;
-
-            this.isUpdatingFrameOffset = true;
-            if (Math.Abs(oldOffset - newOffset) > TimelineUtils.MinUnitZoom) {
-                foreach (TimelineElementControl element in this.GetElements()) {
-                    element.FrameOffset = newOffset;
-                }
-            }
-            this.isUpdatingFrameOffset = false;
-        }
+        public static readonly DependencyProperty LayerTypeProperty =
+            DependencyProperty.Register(
+                "LayerType",
+                typeof(string),
+                typeof(TimelineLayerControl),
+                new FrameworkPropertyMetadata(
+                    "Any",
+                    FrameworkPropertyMetadataOptions.None,
+                    (d, e) => ((TimelineLayerControl) d).OnLayerTypeChanged((string) e.OldValue, (string) e.NewValue)));
 
         /// <summary>
         /// The zoom level of this timeline layer
@@ -85,6 +58,74 @@ namespace TimelineDemo.Timeline {
         public double FrameOffset {
             get => (double) this.GetValue(FrameOffsetProperty);
             set => this.SetValue(FrameOffsetProperty, value);
+        }
+
+        /// <summary>
+        /// The type of elements that this layer contains. Elements will contain 
+        /// the same layer type as this, at least, that's the intention
+        /// </summary>
+        public string LayerType {
+            get => (string) this.GetValue(LayerTypeProperty);
+            set => this.SetValue(LayerTypeProperty, value);
+        }
+
+        /// <summary>
+        /// The timeline that owns/contains this timeline layer
+        /// </summary>
+        public TimelineControl Timeline { get; set; }
+
+        private bool isUpdatingUnitZoom;
+        private bool isUpdatingFrameOffset;
+        private bool isUpdatingLayerType;
+
+        public TimelineLayerControl() {
+            this.InitializeComponent();
+            this.LayerType = "Any";
+            this.CreateElement(0, 100);
+            this.CreateElement(105, 30);
+            this.CreateElement(200, 50);
+        }
+
+        private void OnUnitZoomChanged(double oldZoom, double newZoom) {
+            if (this.isUpdatingUnitZoom)
+                return;
+
+            this.isUpdatingUnitZoom = true;
+            if (Math.Abs(oldZoom - newZoom) > TimelineUtils.MinUnitZoom) {
+                foreach (TimelineElementControl element in this.GetElements()) {
+                    element.UnitZoom = newZoom;
+                }
+            }
+
+            this.isUpdatingUnitZoom = false;
+        }
+
+        private void OnFrameOffsetChanged(double oldOffset, double newOffset) {
+            if (this.isUpdatingFrameOffset)
+                return;
+
+            this.isUpdatingFrameOffset = true;
+            if (Math.Abs(oldOffset - newOffset) > TimelineUtils.MinUnitZoom) {
+                foreach (TimelineElementControl element in this.GetElements()) {
+                    element.FrameOffset = newOffset;
+                }
+            }
+
+            this.isUpdatingFrameOffset = false;
+        }
+
+        private void OnLayerTypeChanged(string oldType, string newType) {
+            if (this.isUpdatingLayerType || oldType == newType)
+                return;
+
+            this.isUpdatingLayerType = true;
+
+            // Maybe invalidate all of the elements?
+            // foreach (TimelineElementControl element in this.GetElements()) {
+            //     element.FrameOffset = newOffset;
+            // }
+
+            this.isUpdatingLayerType = false;
         }
 
         public double GetRenderX(TimelineElementControl control) {
@@ -155,13 +196,13 @@ namespace TimelineDemo.Timeline {
         /// Removes the given clip from this timeline layer
         /// </summary>
         /// <param name="element"></param>
-        public bool DestroyClip(TimelineElementControl element) {
+        public bool RemoveElement(TimelineElementControl element) {
             int index = this.ElementGrid.Children.IndexOf(element);
             if (index == -1) {
                 return false;
             }
 
-            this.ElementGrid.Children.Remove(element);
+            this.ElementGrid.Children.RemoveAt(index);
             this.OnElementChildrenChanged();
             return true;
         }

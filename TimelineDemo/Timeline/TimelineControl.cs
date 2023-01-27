@@ -8,7 +8,7 @@ namespace TimelineDemo.Timeline {
     /// <summary>
     /// Interaction logic for TimelineControl.xaml
     /// </summary>
-    public partial class TimelineControl : UserControl {
+    public class TimelineControl : ItemsControl {
         public static readonly DependencyProperty UnitZoomProperty =
             DependencyProperty.Register(
                 "UnitZoom",
@@ -50,7 +50,9 @@ namespace TimelineDemo.Timeline {
         }
 
         public TimelineControl() {
-            this.InitializeComponent();
+            this.HorizontalContentAlignment = HorizontalAlignment.Stretch;
+            ScrollViewer.SetCanContentScroll(this, false);
+
             this.CreateLayer();
             this.CreateLayer();
             this.CreateLayer();
@@ -81,7 +83,7 @@ namespace TimelineDemo.Timeline {
         }
 
         public IEnumerable<TimelineLayerControl> GetLayers() {
-            return this.LayersList.Items.Cast<TimelineLayerControl>();
+            return this.Items.Cast<TimelineLayerControl>();
         }
 
         public TimelineLayerControl CreateLayer() {
@@ -89,7 +91,7 @@ namespace TimelineDemo.Timeline {
                 Timeline = this
             };
 
-            this.LayersList.Items.Add(layer);
+            this.Items.Add(layer);
             this.OnLayerCollectionChanged();
             return layer;
         }
