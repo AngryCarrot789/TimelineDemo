@@ -60,7 +60,7 @@ namespace TimelineDemo {
 
         public void DestroyCopiedClip() {
             if (this.CopiedElement != null) {
-                this.OriginalElement.TimelineLayer.DestroyClip(this.CopiedElement);
+                this.OriginalElement.TimelineLayer.RemoveElement(this.CopiedElement);
                 this.CopiedElement = null;
             }
         }

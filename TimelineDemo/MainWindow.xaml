@@ -6,7 +6,8 @@
         xmlns:local="clr-namespace:TimelineDemo"
         xmlns:timeline="clr-namespace:TimelineDemo.Timeline"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800" PreviewMouseWheel="Window_PreviewMouseWheel">
+        Title="MainWindow" Height="450" Width="800" PreviewMouseWheel="Window_PreviewMouseWheel"
+        Background="#FF252525">
     <Grid>
         <timeline:TimelineControl Margin="0,0,0,28" x:Name="MyTimeline" FocusManager.IsFocusScope="True"/>
         <Slider Minimum="0.001" Maximum="5" Value="{Binding UnitZoom, ElementName=MyTimeline, UpdateSourceTrigger=PropertyChanged}" VerticalAlignment="Bottom" Margin="5,0,0,5" HorizontalAlignment="Left" Width="200"/>

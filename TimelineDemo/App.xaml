@@ -5,21 +5,10 @@
              xmlns:converters="clr-namespace:TimelineDemo.Converters"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <converters:BooleanConverter x:Key="SelectedToBorderBrushConverter">
-            <converters:BooleanConverter.TrueValue>
-                <SolidColorBrush Color="Orange"/>
-            </converters:BooleanConverter.TrueValue>
-            <converters:BooleanConverter.FalseValue>
-                <SolidColorBrush Color="DimGray"/>
-            </converters:BooleanConverter.FalseValue>
-        </converters:BooleanConverter>
-        <converters:BooleanConverter x:Key="SelectedToBorderThicknessConverter">
-            <converters:BooleanConverter.TrueValue>
-                <Thickness Left="1" Top="1" Right="1" Bottom="1"/>
-            </converters:BooleanConverter.TrueValue>
-            <converters:BooleanConverter.FalseValue>
-                <Thickness Left="1" Top="0" Right="1" Bottom="0"/>
-            </converters:BooleanConverter.FalseValue>
-        </converters:BooleanConverter>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Timeline/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 
 namespace TimelineDemo.Timeline {
     /// <summary>
     /// Interaction logic for TimelineLayerControl.xaml
     /// </summary>
-    public partial class TimelineLayerControl : UserControl {
+    public class TimelineLayerControl : MultiSelector {
         public static readonly DependencyProperty UnitZoomProperty =
             DependencyProperty.Register(
                 "UnitZoom",
@@ -79,7 +79,6 @@ namespace TimelineDemo.Timeline {
         private bool isUpdatingLayerType;
 
         public TimelineLayerControl() {
-            this.InitializeComponent();
             this.LayerType = "Any";
             this.CreateElement(0, 100);
             this.CreateElement(105, 30);
@@ -121,9 +120,9 @@ namespace TimelineDemo.Timeline {
             this.isUpdatingLayerType = true;
 
             // Maybe invalidate all of the elements?
-            // foreach (TimelineElementControl element in this.GetElements()) {
-            //     element.FrameOffset = newOffset;
-            // }
+            foreach (TimelineElementControl element in this.GetElements()) {
+                element.OnLayerTypeChanged(oldType, newType);
+            }
 
             this.isUpdatingLayerType = false;
         }
@@ -149,7 +148,7 @@ namespace TimelineDemo.Timeline {
         }
 
         public IEnumerable<TimelineElementControl> GetElements() {
-            return this.ElementGrid.Children.Cast<TimelineElementControl>();
+            return this.Items.OfType<TimelineElementControl>();
         }
 
         /// <summary>
@@ -167,7 +166,7 @@ namespace TimelineDemo.Timeline {
                 TimelineLayer = this
             };
 
-            this.ElementGrid.Children.Add(cloned);
+            this.Items.Add(cloned);
             this.OnElementChildrenChanged();
 
             cloned.FrameOffset = element.FrameOffset;
@@ -182,7 +181,7 @@ namespace TimelineDemo.Timeline {
                 TimelineLayer = this
             };
 
-            this.ElementGrid.Children.Add(element);
+            this.Items.Add(element);
             this.OnElementChildrenChanged();
 
             element.FrameOffset = this.FrameOffset;
@@ -197,12 +196,12 @@ namespace TimelineDemo.Timeline {
         /// </summary>
         /// <param name="element"></param>
         public bool RemoveElement(TimelineElementControl element) {
-            int index = this.ElementGrid.Children.IndexOf(element);
+            int index = this.Items.IndexOf(element);
             if (index == -1) {
                 return false;
             }
 
-            this.ElementGrid.Children.RemoveAt(index);
+            this.Items.RemoveAt(index);
             this.OnElementChildrenChanged();
             return true;
         }
@@ -213,6 +212,74 @@ namespace TimelineDemo.Timeline {
 
         public void OnClipDragged(TimelineElementControl element, TimelineElementMoveData data) {
 
+        }
+
+        public void EnsureSelectedItem(TimelineElementControl element, bool isSelected) {
+            if (isSelected) {
+                if (!this.SelectedItems.Contains(element)) {
+                    this.AddSelection(element);
+                }
+            }
+            else {
+                if (this.SelectedItems.Contains(element)) {
+                    this.RemoveSelection(element);
+                }
+            }
+        }
+
+        public bool AddSelection(TimelineElementControl element) {
+            int index = this.SelectedItems.IndexOf(element);
+            if (index != -1) { // contains == true
+                element.IsSelected = true;
+                return false;
+            }
+
+            this.BeginUpdateSelectedItems();
+            this.SelectedItems.Add(element);
+            this.EndUpdateSelectedItems();
+            this.SelectedItem = element;
+            element.IsSelected = true;
+            return true;
+        }
+
+        public bool RemoveSelection(TimelineElementControl element) {
+            int index = this.SelectedItems.IndexOf(element);
+            if (index == -1) {
+                element.IsSelected = false;
+                return false;
+            }
+
+            this.BeginUpdateSelectedItems();
+            this.SelectedItems.RemoveAt(index);
+            this.EndUpdateSelectedItems();
+            this.SelectedItem = this.SelectedItems.Count > 0 ? this.SelectedItems[this.SelectedItems.Count - 1] : null;
+            element.IsSelected = false;
+            return true;
+        }
+
+        public void SetPrimarySelection(TimelineElementControl element) {
+            this.BeginUpdateSelectedItems();
+            this.SelectedItems.Clear();
+            this.SelectedItems.Add(element);
+            this.EndUpdateSelectedItems();
+            this.SelectedItem = element;
+            element.IsSelected = true;
+        }
+
+        public void HandleMouseClick(TimelineElementControl element, MouseButton button, bool isDown) {
+            if (button == MouseButton.Left) {
+                if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control) {
+                    if (element.IsSelected) {
+                        this.RemoveSelection(element);
+                    }
+                    else {
+                        this.AddSelection(element);
+                    }
+                }
+                else {
+                    this.SetPrimarySelection(element);
+                }
+            }
         }
     }
 }

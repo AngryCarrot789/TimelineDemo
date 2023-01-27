@@ -83,15 +83,9 @@
     <Compile Include="TimelineElementDragAdorner.cs" />
     <Compile Include="TimelineElementMoveData.cs" />
     <Compile Include="TimelineUtils.cs" />
-    <Compile Include="Timeline\TimelineControl.xaml.cs">
-      <DependentUpon>TimelineControl.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Timeline\TimelineElementControl.xaml.cs">
-      <DependentUpon>TimelineElementControl.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Timeline\TimelineLayerControl.xaml.cs">
-      <DependentUpon>TimelineLayerControl.xaml</DependentUpon>
-    </Compile>
+    <Compile Include="Timeline\TimelineControl.cs" />
+    <Compile Include="Timeline\TimelineElementControl.cs" />
+    <Compile Include="Timeline\TimelineLayerControl.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -104,18 +98,7 @@
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="Timeline\TimelineControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Timeline\TimelineElementControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Timeline\TimelineLayerControl.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
+    <Page Include="Timeline\Styles.xaml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">

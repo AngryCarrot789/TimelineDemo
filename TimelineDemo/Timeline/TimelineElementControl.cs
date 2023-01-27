@@ -61,15 +61,13 @@ namespace TimelineDemo.Timeline {
                     false,
                     FrameworkPropertyMetadataOptions.BindsTwoWayByDefault | FrameworkPropertyMetadataOptions.Journal,
                     (d, e) => ((TimelineElementControl) d).OnIsSelectedChanged((bool) e.OldValue, (bool) e.NewValue)));
-        // public static readonly DependencyProperty IsSelectedProperty =
-        //     DependencyProperty.Register(
-        //         "IsSelected",
-        //         typeof(bool),
-        //         typeof(TimelineElementControl),
-        //         new FrameworkPropertyMetadata(
-        //             false,
-        //             FrameworkPropertyMetadataOptions.None,
-        //             (d, e) => ((TimelineElementControl) d).OnIsSelectedChanged((bool) e.OldValue, (bool) e.NewValue)));
+
+        public static readonly DependencyProperty DataProperty =
+            DependencyProperty.Register(
+                "Data",
+                typeof(object),
+                typeof(TimelineElementControl),
+                new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.None));
 
         /// <summary>
         /// The zoom level of this timeline layer
@@ -113,6 +111,14 @@ namespace TimelineDemo.Timeline {
         public bool IsSelected {
             get => (bool) this.GetValue(IsSelectedProperty);
             set => this.SetValue(IsSelectedProperty, value);
+        }
+
+        /// <summary>
+        /// Custom timeline data
+        /// </summary>
+        public object Data {
+            get => this.GetValue(DataProperty);
+            set => this.SetValue(DataProperty, value);
         }
 
         /// <summary>
@@ -166,6 +172,12 @@ namespace TimelineDemo.Timeline {
 
         public TimelineElementControl() {
             this.Focusable = true;
+            this.HorizontalAlignment = HorizontalAlignment.Left;
+            this.VerticalAlignment = VerticalAlignment.Stretch;
+        }
+
+        public double GetMouseDifference(double mouseX) {
+            return Math.Abs(this.lastLeftClickPoint.X - mouseX);
         }
 
         protected override void OnGotFocus(RoutedEventArgs e) {
@@ -184,12 +196,14 @@ namespace TimelineDemo.Timeline {
 
         protected override void OnMouseLeftButtonDown(MouseButtonEventArgs e) {
             this.lastLeftClickPoint = e.GetPosition(this);
-            this.Focus();
+            this.TimelineLayer.HandleMouseClick(this, e.ChangedButton, true);
+            this.CaptureMouse();
         }
 
         protected override void OnMouseLeftButtonUp(MouseButtonEventArgs e) {
             if (this.IsMouseCaptured) {
                 this.FinishCompletedDragMove();
+                this.TimelineLayer.HandleMouseClick(this, e.ChangedButton, false);
                 this.ReleaseMouseCapture();
             }
         }
@@ -265,8 +279,7 @@ namespace TimelineDemo.Timeline {
             }
 
             Point mousePoint = e.GetPosition(this);
-
-            if (this.IsMouseCaptured) {
+            if (this.IsMouseCaptured && this.moveDrag != null) {
                 if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control) {
                     this.HandleDrag_CopyClipMode();
                 }
@@ -295,9 +308,9 @@ namespace TimelineDemo.Timeline {
                     this.moveDrag = null;
                 }
             }
-            else if (e.LeftButton == MouseButtonState.Pressed) {
+            else if (e.LeftButton == MouseButtonState.Pressed && this.IsSelected) {
                 // handle "drag entry zone"
-                if (Math.Abs(this.lastLeftClickPoint.X - mousePoint.X) > 10d) {
+                if (this.GetMouseDifference(mousePoint.X) > 10d) {
                     this.BeginDragMovement();
                 }
             }
@@ -345,9 +358,21 @@ namespace TimelineDemo.Timeline {
                 return;
             }
 
-            if (newSelected && !this.IsFocused) {
-                this.Focus();
+            // this.TimelineLayer.EnsureSelectedItem(this, newSelected);
+            if (newSelected) {
+                this.OnSelected();
             }
+            else {
+                this.OnUnselected();
+            }
+        }
+
+        public void OnSelected() {
+            this.Focus();
+        }
+
+        public void OnUnselected() {
+
         }
 
         public void UpdatePositionAndSize() {
@@ -361,6 +386,18 @@ namespace TimelineDemo.Timeline {
 
         public void UpdateSize() {
             this.Width = this.PixelWidth;
+        }
+
+        /// <summary>
+        /// Called when the parent (aka the timeline layer)'s type changes from something to something else
+        /// <para>
+        /// This can be used to set an invalid state in this element if the new type is incompatible
+        /// </para>
+        /// </summary>
+        /// <param name="oldType">The previous layer type</param>
+        /// <param name="newType">The new layer type</param>
+        public void OnLayerTypeChanged(string oldType, string newType) {
+
         }
     }
 }
